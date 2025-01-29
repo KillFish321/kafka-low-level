@@ -1,0 +1,71 @@
+= Документация проекта
+Попов Николай
+:toc: left
+:toc-title: Содержание
+:icons: font
+= :source-highlighter: highlight._js_
+
+== Краткое описание
+Рабочая директория: src/main/com.example.kafkalowlevel +
+Контроллер для работы с сообщениями: <<KafkaController, /controller/KafkaController>> +
+Java-класс продюсера: <<KafkaProducerService, /kafka/service/producer/KafkaProducerService.java>> +
+Java-класс консьюмера: <<KafkaConsumerService, /kafka/service/consumer/KafkaConsumerService.java>> +
+Java-класс для генерации тестовых сообщений: <<MessageGenerate, /kafka/utils/MessageGenerateService.java>>
+
+== Классы и методы
+[[KafkaController]] **KafkaController**: +
+На вход принимает <<MessageRequestDto, /kafkalowlevel/dto/MessageRequestDto.java>>
+[source, java]
+
+@PostMapping("/send")
+public void sendMessage(@RequestBody MessageRequestDto request) {
+    producer.sendMessage(request.getTopic(), request.getMessage());
+}
+
+[[KafkaProducerService]] **KafkaProducerService**: +
+Продюсер для отправки сообщений.
+[source, java]
+public void sendMessage(String topic, Message message) {
+    try {
+        String serializedMessage = mapper.writeValueAsString(message);
+        kafkaTemplate.send(topic, serializedMessage);
+        log.info("В топик \"{}\" отправлено сообщение: {}", topic, serializedMessage);
+    } catch (Exception e) {
+        log.error("Не удалось отправить сообщение");
+        throw new RuntimeException();
+    }
+}
+
+[[MessageGenerate]] **MessageGenerateService**: +
+При отправке запроса на "http://localhost:8080/generate" переводит флаг в состояние true метод начинает генерировать сообщения раз в 3 секунды. +
+При повторной отправке запроса переводит флаг в состояние false
+[source, java]
+
+@Scheduled(fixedRate = 3000)
+private void sendMessageGenerate() throws JsonProcessingException {
+    if (!schedulerEnabled){
+        return;
+    }
+    String serializedMessage = mapper.writeValueAsString(messageBuilder());
+    kafkaTemplate.send("my-topic", serializedMessage);
+}
+
+Метод для переключения флага.
+[source, java]
+
+public void toggleScheduler() {
+    schedulerEnabled = !schedulerEnabled;
+}
+
+[[MessageRequestDto]] **MessageRequestDto**: +
+ДТО для отправки сообщений
+[source, java]
+@Getter
+@Builder
+public class MessageRequestDto {
+    private Message message;
+    private String topic;
+}
+
+
+

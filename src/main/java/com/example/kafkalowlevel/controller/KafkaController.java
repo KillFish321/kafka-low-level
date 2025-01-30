@@ -17,4 +17,5 @@ public class KafkaController {
     public void sendMessage(@RequestBody MessageRequestDto request) {
         producer.sendMessage(request.getTopic(), request.getMessage());
     }
+
 }

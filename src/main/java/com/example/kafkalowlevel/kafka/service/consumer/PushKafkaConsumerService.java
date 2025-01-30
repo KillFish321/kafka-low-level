@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class KafkaConsumerService {
+public class PushKafkaConsumerService {
 
     @KafkaListener(topics = "my-topic", groupId = "example-group")
     public void listen(ConsumerRecord<String, String> record) {
-        log.info("Получено сообщение: value = {}, offset = {}", record.value(), record.offset());
+        log.info("Push Consumer - Получено сообщение: value = {}, offset = {}", record.value(), record.offset());
     }
 }
 

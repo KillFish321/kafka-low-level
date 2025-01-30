@@ -4,11 +4,13 @@ import com.example.kafkalowlevel.dto.Message;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MessageGenerateService {
 
@@ -29,6 +31,7 @@ public class MessageGenerateService {
         }
         String serializedMessage = mapper.writeValueAsString(messageBuilder());
         kafkaTemplate.send("my-topic", serializedMessage);
+        log.info("В топик: my-topic отправлено сообщение: {}", serializedMessage);
     }
 
     private Message messageBuilder() {

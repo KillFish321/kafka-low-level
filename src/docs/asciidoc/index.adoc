@@ -9,12 +9,13 @@
 Рабочая директория: src/main/com.example.kafkalowlevel +
 Контроллер для работы с сообщениями: <<KafkaController, /controller/KafkaController>> +
 Java-класс продюсера: <<KafkaProducerService, /kafka/service/producer/KafkaProducerService.java>> +
-Java-класс консьюмера: <<KafkaConsumerService, /kafka/service/consumer/KafkaConsumerService.java>> +
+Java-класс консьюмера Push: <<PushKafkaConsumerService, /kafka/service/consumer/PushKafkaConsumerService.java>> +
+Java-класс консьюмера Pull: <<PullKafkaConsumerService, /kafka/service/consumer/PullKafkaConsumerService.java>> +
 Java-класс для генерации тестовых сообщений: <<MessageGenerate, /kafka/utils/MessageGenerateService.java>>
 
 == Классы и методы
 [[KafkaController]] **KafkaController**: +
-На вход принимает <<MessageRequestDto, /kafkalowlevel/dto/MessageRequestDto.java>>
+На вход принимает <<MessageDto, /kafkalowlevel/dto/MessageRequestDto.java>>
 [source, java]
 
 @PostMapping("/send")
@@ -35,6 +36,62 @@ public void sendMessage(String topic, Message message) {
         throw new RuntimeException();
     }
 }
+
+[[PullKafkaConsumerService]] **PullKafkaConsumerService**: +
+Пулл модель, коммитит по 5 сообщений. Активен со старта
+[source, java]
+
+public void consume() {
+    // Подписка на топик
+    List<String> topics = Collections.singletonList("my-topic");
+    consumer.subscribe(topics);
+    // Временное хранилище
+    List<ConsumerRecord<String, String>> buffer = new ArrayList<>();
+    int batchSize = 5;
+    try {
+        while (true) {
+            // Ручной вызов poll для получения сообщений
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(5));
+            for (ConsumerRecord<String, String> record : records) {
+                buffer.add(record);
+            }
+            if (buffer.size() >= batchSize) {
+                for (ConsumerRecord<String, String> record : buffer) {
+                    log.info("Pull Consumer - Получено сообщение: value = {}, offset = {}", record.value(), record.offset());
+                    // Фиксируем смещения вручную после успешной обработки сообщения
+                    commitOffset(consumer, record.topic(), record.partition(), record.offset());
+                }
+                buffer.clear();
+            } //else {
+        }
+    } catch (WakeupException e) {
+        log.warn("Потребление остановлено", e);
+    } catch (Exception e) {
+        log.error("Ошибка при потреблении сообщений", e);
+    } finally {
+        consumer.close(); // Закрываем потребителя
+    }
+}
+
+Метод ручной фиксации коммитов
+[source, java]
+
+private void commitOffset(KafkaConsumer<String, String> consumer, String topic, int partition, long offset) {
+    OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(offset + 1L); // Смещение увеличивается на единицу после успешного прочтения
+    Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = new HashMap<>();
+    offsetsToCommit.put(new TopicPartition(topic, partition), offsetAndMetadata);
+    consumer.commitSync(offsetsToCommit);
+}
+
+[[PushKafkaConsumerService]] **PushKafkaConsumerService**: +
+Пуш модель забирает по одному сообщению за раз. Активен со старта
+[source, java]
+@KafkaListener(topics = "my-topic", groupId = "example-group")
+public void listen(ConsumerRecord<String, String> record) {
+    log.info("Push Consumer - Получено сообщение: value = {}, offset = {}", record.value(), record.offset());
+}
+
+== Саппорт
 
 [[MessageGenerate]] **MessageGenerateService**: +
 При отправке запроса на "http://localhost:8080/generate" переводит флаг в состояние true метод начинает генерировать сообщения раз в 3 секунды. +
@@ -57,7 +114,7 @@ public void toggleScheduler() {
     schedulerEnabled = !schedulerEnabled;
 }
 
-[[MessageRequestDto]] **MessageRequestDto**: +
+[[MessageDto]] **MessageRequestDto**: +
 ДТО для отправки сообщений
 [source, java]
 @Getter
@@ -67,5 +124,9 @@ public class MessageRequestDto {
     private String topic;
 }
 
+== Гайд
 
+1. Запустить docker-compose.yml
+2. Создать топик
+3. Отправить запрос по адресу "localhost:8080/generate"
 

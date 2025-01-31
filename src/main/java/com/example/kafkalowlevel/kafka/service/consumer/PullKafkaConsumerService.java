@@ -22,7 +22,6 @@ public class PullKafkaConsumerService {
 
     private final ExecutorService executorService;
 
-    // Конструктор для инициализации ExecutorService
     public PullKafkaConsumerService() {
         this.executorService = Executors.newSingleThreadExecutor();
     }

@@ -6,6 +6,9 @@
 = :source-highlighter: highlight._js_
 
 == Краткое описание
+
+Для корректной визуализации необходим плагин AsciiDoc
+
 Рабочая директория: src/main/com.example.kafkalowlevel +
 Контроллер для работы с сообщениями: <<KafkaController, /controller/KafkaController>> +
 Java-класс продюсера: <<KafkaProducerService, /kafka/service/producer/KafkaProducerService.java>> +
@@ -115,7 +118,7 @@ public void toggleScheduler() {
 }
 
 [[MessageDto]] **MessageRequestDto**: +
-ДТО для отправки сообщений
+ДТО для мапинга запросов
 [source, java]
 @Getter
 @Builder
